@@ -1,0 +1,98 @@
+# This repository publishes source code only. Local research data and generated
+# artifacts stay on the workstation and must never be committed.
+
+# Python environments and caches
+.venv/
+.venv-*/
+.cohere-packages/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Credentials and machine-local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.claude/
+
+# NADI and derived datasets/manifests
+data/
+**/data/
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.parquet
+*.arrow
+*.csv
+*.tsv
+*.jsonl
+
+# Models, checkpoints, processors, and language-model binaries
+**/best*/
+**/ckpt*/
+**/checkpoint-*/
+**/*_ckpt*/
+**/*_best*/
+**/*_processor/
+**/processor/
+*.nemo
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.arpa
+*.npz
+*.npy
+
+# Predictions, submissions, annotations, and experiment output
+predictions*/
+**/predictions*/
+**/pred*/
+**/annotation*/
+**/exp/
+**/runs/
+**/wandb/
+*.log
+*.out
+*.err
+*.zip
+
+# Third-party source checkouts; dependencies are installed from requirements.
+finetune/NeMo/
+finetune/kenlm/
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Publication allowlist. Keep this last: even a new artifact type remains
+# ignored until it is deliberately reviewed and added here.
+/*
+!/.gitignore
+!/README.md
+!/requirements.txt
+!/docs/
+/docs/*
+!/docs/nadi-system-paper.md
+!/w2vbert/
+/w2vbert/*
+!/w2vbert/build_vocab.py
+!/w2vbert/mbr_ensemble.py
+!/w2vbert/norm.py
+!/w2vbert/rover_cn.py
+!/w2vbert/rover_dir.py
+!/w2vbert/run_decode.py
+!/w2vbert/score_dir.py
+!/w2vbert/train_ctc.py
+!/w2vbert/tune_lm.py
+!/w2vbert/tune_rover_weights.py
