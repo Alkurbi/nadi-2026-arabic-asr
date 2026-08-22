@@ -2,7 +2,7 @@
 
 Code for NADI 2026 Subtask 1.1: Robust Arabic ASR. It trains a W2v-BERT 2.0 speech recognizer, decodes with a KenLM language model, and can combine several recognizers into an ensemble.
 
-This repository does not include competition data, transcripts, model weights, checkpoints, or predictions. Get the NADI data under its own terms and keep it outside Git.
+This repository does not include competition data, transcripts, model weights, checkpoints, or predictions. Get the NADI data under its own terms.
 
 ## Results
 
@@ -10,7 +10,7 @@ On our 800-utterance holdout, the best single model reached 46.12% macro WER. Th
 
 ## Quick start
 
-You need Python 3.11, a CUDA-capable GPU, and PowerShell. Install PyTorch for your CUDA version first, then install the project packages.
+You need Python 3.11 and a CUDA-capable GPU. Install PyTorch for your CUDA version first, then install the project packages.
 
 ```powershell
 python -m venv .venv
@@ -45,8 +45,6 @@ Each manifest is a JSON Lines file. Put one audio clip on each line:
 ```json
 {"audio_filepath":"C:/data/audio.wav","text":"...","duration":3.42}
 ```
-
-`audio_filepath` should be an absolute path. `duration` is the clip length in seconds. These private files are ignored by Git.
 
 ## Train a model
 
