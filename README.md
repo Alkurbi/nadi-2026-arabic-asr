@@ -1,25 +1,16 @@
-# Compute-constrained multidialectal Arabic ASR
+# NADI 2026 Arabic ASR
 
-Reproducibility code for NADI 2026 Subtask 1.1 (Robust Arabic ASR). The reported
-system fine-tunes `facebook/w2v-bert-2.0` with a CTC head, decodes with a 5-gram
-KenLM language model, and combines diverse recognizers with confusion-network
-ROVER or minimum Bayes risk (MBR) selection.
+Code for NADI 2026 Subtask 1.1: Robust Arabic ASR. It trains a W2v-BERT 2.0 speech recognizer, decodes with a KenLM language model, and can combine several recognizers into an ensemble.
 
-The repository intentionally contains **no competition audio, transcripts,
-manifests, model weights, checkpoints, or predictions**. Obtain the NADI data
-under its own terms and keep it outside version control.
+This repository does not include competition data, transcripts, model weights, checkpoints, or predictions. Get the NADI data under its own terms and keep it outside Git.
 
-## Reported result
+## Results
 
-On our fixed 800-utterance holdout (100 utterances per dialect), the strongest
-single recognizer reached 46.12% macro WER and the selected four-system ensemble
-reached 42.59% macro WER. See [the system description](docs/nadi-system-paper.md)
-for context.
+On our 800-utterance holdout, the best single model reached 46.12% macro WER. The four-model ensemble reached 42.59% macro WER.
 
-## Environment
+## Quick start
 
-Python 3.11 and a CUDA-capable GPU were used. Create an environment and install
-PyTorch for your CUDA version first, followed by the remaining dependencies:
+You need Python 3.11, a CUDA-capable GPU, and PowerShell. Install PyTorch for your CUDA version first, then install the project packages.
 
 ```powershell
 python -m venv .venv
@@ -28,84 +19,82 @@ pip install torch --index-url https://download.pytorch.org/whl/cu124
 pip install -r requirements.txt
 ```
 
-KenLM decoding also requires a working KenLM installation compatible with
-`pyctcdecode`.
+KenLM is only required for language-model decoding. It must be installed separately and work with `pyctcdecode`.
 
-## Expected private data layout
+## Add your data
 
-Create JSON Lines manifests under `finetune/data/`. Each row must contain an
-audio path, normalized transcript source, and duration:
+Create this private data layout:
 
-```json
-{"audio_filepath":"/absolute/path/to/audio.wav","text":"...","duration":3.42}
+```text
+finetune/data/
+|-- train_manifest.json
+|-- dev_manifest.json
+`-- holdout/
+    |-- Algeria.json
+    |-- Egypt.json
+    |-- Jordan.json
+    |-- Mauritania.json
+    |-- Morocco.json
+    |-- Palestine.json
+    |-- UAE.json
+    `-- Yemen.json
 ```
 
-The default training files are `train_manifest.json` and `dev_manifest.json`.
-Holdout decoding expects one file per dialect in `finetune/data/holdout/`:
-`Algeria.json`, `Egypt.json`, `Jordan.json`, `Mauritania.json`, `Morocco.json`,
-`Palestine.json`, `UAE.json`, and `Yemen.json`. All of these paths are ignored by
-Git.
+Each manifest is a JSON Lines file. Put one audio clip on each line:
 
-## Reproduce the pipeline
+```json
+{"audio_filepath":"C:/data/audio.wav","text":"...","duration":3.42}
+```
 
-Run commands from `w2vbert/` so its local modules resolve correctly.
+`audio_filepath` should be an absolute path. `duration` is the clip length in seconds. These private files are ignored by Git.
 
-1. Build the character vocabulary after placing the private manifests:
+## Train a model
 
-   ```powershell
-   python build_vocab.py
-   ```
+Run the scripts from `w2vbert/`:
 
-2. Fine-tune w2v-BERT 2.0. Settings are environment variables so experiments
-   remain shell-reproducible:
+```powershell
+cd w2vbert
+python build_vocab.py
+python train_ctc.py
+```
 
-   ```powershell
-   $env:TRAIN_MANIFESTS = "train_manifest.json"
-   $env:DEV_MANIFEST = "dev_manifest.json"
-   $env:OUTDIR = "ckpt"
-   $env:SAVEDIR = "best"
-   $env:BUDGET = "45"
-   python train_ctc.py
-   ```
+Training uses `train_manifest.json` and `dev_manifest.json` by default. The final model is saved to `w2vbert/best/`.
 
-   Important controls include `INIT_MODEL`, `TRAIN_MODE` (`full` or
-   `adapter_head`), `TRAIN_MANIFESTS`, `DEV_MANIFEST`, `DEV_HOLDOUT`, `DIALECT`,
-   `BUDGET`, `EPOCHS`, `LR`, `WARMUP`, `EVAL_STEPS`, `EBS`, `NW`, and `SEED`.
+If the GPU runs out of memory, lower the audio budget:
 
-3. Decode a holdout or the public test set with a KenLM ARPA model:
+```powershell
+$env:BUDGET = "30"
+python train_ctc.py
+```
 
-   ```powershell
-   $env:MODELDIR = "best"
-   $env:ARPA = "C:\path\to\big5.arpa"
-   $env:SRC = "holdout" # or test
-   $env:OUT = "predictions_model_a"
-   $env:ALPHA = "0.5"
-   $env:BETA = "1.5"
-   $env:BEAM = "150"
-   python run_decode.py
-   ```
+## Decode and ensemble
 
-4. Combine prediction directories. Each directory must contain one text file
-   per dialect with one hypothesis per line:
+To decode the holdout with a trained model and a KenLM ARPA file:
 
-   ```powershell
-   $env:WEIGHTS = "1,1,1,1"
-   python rover_cn.py predictions_rover predictions_a predictions_b predictions_c predictions_d
+```powershell
+$env:MODELDIR = "best"
+$env:ARPA = "C:\path\to\big5.arpa"
+$env:SRC = "holdout"
+$env:OUT = "predictions_model_a"
+python run_decode.py
+```
 
-   $env:OUT = "predictions_mbr"
-   python mbr_ensemble.py predictions_a predictions_b predictions_c predictions_d
-   ```
+To combine four prediction directories:
 
-   Set `REFS` to the private holdout directory to print evaluation metrics.
-   `tune_rover_weights.py` searches integer ROVER weights on held-out references.
+```powershell
+python rover_cn.py predictions_rover predictions_a predictions_b predictions_c predictions_d
 
-## Source map
+$env:OUT = "predictions_mbr"
+python mbr_ensemble.py predictions_a predictions_b predictions_c predictions_d
+```
 
-- `train_ctc.py`: duration-budgeted w2v-BERT CTC fine-tuning.
-- `run_decode.py`: unified holdout/test CTC + KenLM decoding.
-- `tune_lm.py`: language-model hyperparameter search.
-- `rover_cn.py`: weighted progressive confusion-network voting.
-- `mbr_ensemble.py`: reference-free sentence-level MBR selection.
-- `tune_rover_weights.py`: held-out ensemble weight search.
-- `norm.py`, `score_dir.py`, `score_holdout.py`: official-style normalization
-  and evaluation helpers.
+Each prediction directory must contain one text file per dialect, with one transcript per line.
+
+## Key files
+
+- `train_ctc.py`: train W2v-BERT with CTC.
+- `run_decode.py`: decode holdout or test audio with KenLM.
+- `rover_cn.py`: combine predictions by confusion-network voting.
+- `mbr_ensemble.py`: select predictions with minimum Bayes risk.
+- `tune_lm.py`: tune KenLM decoding values.
+- `norm.py` and `score_holdout.py`: normalize and score transcripts.
